@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: authorization
+  data:
+    mongodb:
+      uri: ${DB_URL:mongodb://root:neox24@localhost:27017/auth?authSource=admin}
+server:
+  servlet:
+    context-path: /api
+  port: 8045

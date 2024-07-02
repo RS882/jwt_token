@@ -11,3 +11,12 @@ server:
 key:
   access: ${ACCESS_SECRET}
   refresh: ${REFRESH_SECRET}
+rsa:
+  private-key: ${PRIVATE_KEY:classpath:certs/private.pem}
+
+#debug: true
+#
+#logging:
+#  level:
+#    org:
+#      springframework: DEBUG

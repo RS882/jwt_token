@@ -6,6 +6,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
+import java.util.Date;
 
 @Data
 @Builder
@@ -19,5 +20,5 @@ public class RefreshToken {
 
     private String userId;
 
-    private LocalDateTime expireAt;
+    private Date expireAt;
 }

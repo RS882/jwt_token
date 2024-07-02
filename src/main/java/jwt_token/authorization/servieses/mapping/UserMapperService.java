@@ -15,7 +15,7 @@ public abstract class UserMapperService {
     protected PasswordEncoder encoder;
 
     @Mapping(target = "isActive", constant = "true")
-    @Mapping(target = "role", expression = "java(neox.authorization.contstants.Role.ROLE_USER)")
+    @Mapping(target = "role", expression = "java(jwt_token.authorization.contstants.Role.ROLE_USER)")
     @Mapping(target="password", expression = "java(encoder.encode(dto.getPassword()))")
     public abstract User toEntity(UserRegistrationDto dto);
 

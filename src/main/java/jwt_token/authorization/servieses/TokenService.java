@@ -6,7 +6,6 @@ import io.jsonwebtoken.security.Keys;
 import jwt_token.authorization.domain.entity.RefreshToken;
 import jwt_token.authorization.domain.entity.User;
 import jwt_token.authorization.repositorys.TokenRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -33,7 +32,11 @@ public class TokenService {
 
     private Date refreshTokenExpireAt;
 
-    public TokenService(@Value("${key.access}") String accessKey, @Value("${key.refresh}") String refreshKey, TokenRepository repository) {
+    public TokenService(@Value("${key.access}") String accessKey,
+                        @Value("${key.refresh}") String refreshKey,
+                        TokenRepository repository) {
+
+        var rrr =Decoders.BASE64.decode(accessKey);
         this.accessKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(accessKey));
         this.refreshKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(refreshKey));
         this.repository = repository;
@@ -66,7 +69,7 @@ public class TokenService {
         RefreshToken refreshTokenEntity = RefreshToken.builder()
                 .token(refreshToken)
                 .userId(userId)
-                .expireAt(LocalDateTime.from(this.refreshTokenExpireAt.toInstant()))
+                .expireAt(this.refreshTokenExpireAt)
                 .build();
         repository.save(refreshTokenEntity);
     }

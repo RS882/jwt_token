@@ -15,6 +15,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Set;
 
 @Service
@@ -26,7 +27,7 @@ public class AuthServiceImpl implements AuthService {
     private final TokenService tokenService;
     private final TokenDtoMapperService tokenDtoMapperService;
 
-    private final int MAX_COUNT_OF_LOGINS = 5;
+    public static final int MAX_COUNT_OF_LOGINS = 5;
 
     @Override
     public TokensDto login(LoginDto loginDto) {
@@ -34,7 +35,7 @@ public class AuthServiceImpl implements AuthService {
         User user = (User) userDetailsService.loadUserByUsername(email);
         if (!encoder.matches(loginDto.getPassword(), user.getPassword()))
             throw new BadCredentialsException("Wrong password");
-
+        checkCountOfLogins(user.getId());
         return tokenService.getTokens(user);
     }
 
@@ -45,7 +46,7 @@ public class AuthServiceImpl implements AuthService {
 
         Claims claims = tokenService.getRefreshTokenClaims(inboundRefreshToken);
         User user = (User) userDetailsService.loadUserByUsername(claims.getSubject());
-        Set<String> refreshTokens = tokenService.getRefreshTokensByUserId(user.getId());
+        List<String> refreshTokens = tokenService.getRefreshTokensByUserId(user.getId());
 
         if (!refreshTokens.contains(inboundRefreshToken))
             throw new WrongTokenException("Token is wrong");
@@ -60,8 +61,11 @@ public class AuthServiceImpl implements AuthService {
         return tokenDtoMapperService.toResponseDto(tokensDto);
     }
 
-    private void checkCountOfLogins(String userId) {
+    private  void checkCountOfLogins(String userId) {
         int currentCount = tokenService.getRefreshTokensByUserId(userId).size();
-        if(currentCount >= MAX_COUNT_OF_LOGINS) throw   new LimitOfLoginsException(userId);
+
+        if (currentCount >= MAX_COUNT_OF_LOGINS)
+            throw new LimitOfLoginsException(userId);
+
     }
 }

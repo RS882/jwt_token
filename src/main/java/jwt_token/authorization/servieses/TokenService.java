@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -58,12 +59,12 @@ public class TokenService {
                 .build();
     }
 
-    public Set<String> getRefreshTokensByUserId(String id) {
-        Set<RefreshToken> refreshTokens = repository.findByUserId(id).orElseThrow(
+    public List<String> getRefreshTokensByUserId(String id) {
+        List<RefreshToken> refreshTokens = repository.findByUserId(id).orElseThrow(
                 () -> new TokenNotFoundException("Token not found"));
         return refreshTokens.stream()
                 .map(RefreshToken::getToken)
-                .collect(Collectors.toSet());
+                .collect(Collectors.toList());
     }
 
     public boolean validateRefreshToken(String refreshToken) {
@@ -109,7 +110,7 @@ public class TokenService {
                 .compact();
     }
 
-    private void saveRefreshToken(String refreshToken, String userId) {
+    private  void saveRefreshToken(String refreshToken, String userId) {
         RefreshToken refreshTokenEntity = RefreshToken.builder()
                 .token(refreshToken)
                 .userId(userId)

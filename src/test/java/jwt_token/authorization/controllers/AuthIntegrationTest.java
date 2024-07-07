@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import static jwt_token.authorization.servieses.AuthServiceImpl.MAX_COUNT_OF_LOGINS;
 import static jwt_token.authorization.servieses.CookieService.COOKIE_REFRESH_TOKEN_NAME;
 import static org.springframework.data.mongodb.core.query.Criteria.where;
 import static org.springframework.data.mongodb.core.query.Query.query;
@@ -48,6 +49,7 @@ class AuthIntegrationTest {
     private static final String USER1_PASSWORD = "Querty123!";
 
     private final String TEST_COLLECTION_NAME = "TempUsers";
+    private final String TEST_TOKEN_COLLECTION_NAME = "RefreshToken";
 
     @BeforeAll
     public void setUp() {
@@ -71,6 +73,9 @@ class AuthIntegrationTest {
         mongoTemplate.remove(
                 query(where("_id").is(createdUserId)),
                 TEST_COLLECTION_NAME);
+        mongoTemplate.remove(
+                query(where("userId").is(createdUserId)),
+                TEST_TOKEN_COLLECTION_NAME);
     }
 
     @Nested
@@ -115,6 +120,26 @@ class AuthIntegrationTest {
                     .andExpect(jsonPath("$.message").isString());
         }
 
+        @Test
+        public void login_with_status_403_count_of_logins_is_more_than_maximum() throws Exception {
+
+            String dtoJson = mapper.writeValueAsString(
+                    LoginDto.builder()
+                            .email(USER1_EMAIL)
+                            .password(USER1_PASSWORD)
+                            .build());
+            for (int i = 0; i < MAX_COUNT_OF_LOGINS-1 ; i++) {
+                mockMvc.perform(post("/v1/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(dtoJson))
+                        .andExpect(status().isOk());
+            }
+
+            mockMvc.perform(post("/v1/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(dtoJson))
+                    .andExpect(status().isForbidden());
+        }
 
         private static Stream<Arguments> incorrectLoginData() {
             return Stream.of(Arguments.of(

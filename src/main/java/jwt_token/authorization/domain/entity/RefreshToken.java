@@ -10,7 +10,7 @@ import java.util.Date;
 
 @Data
 @Builder
-@Document
+@Document("RefreshToken")
 public class RefreshToken {
 
     @Id

@@ -3,7 +3,7 @@ spring:
     name: authorization
   data:
     mongodb:
-      uri: ${DB_URL:mongodb://root:neox24@localhost:27017/auth?authSource=admin}
+      uri: ${DB_URL:mongodb://root:rslan24@localhost:27017/auth?authSource=admin}
 server:
   servlet:
     context-path: /api

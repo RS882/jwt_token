@@ -2,7 +2,9 @@ package jwt_token.authorization.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jwt_token.authorization.domain.dto.LoginDto;
+import jwt_token.authorization.domain.dto.TokensDto;
 import jwt_token.authorization.domain.dto.UserRegistrationDto;
+import jwt_token.authorization.servieses.AuthServiceImpl;
 import jwt_token.authorization.servieses.mapping.UserMapperService;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,11 +16,11 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
 
+import static jwt_token.authorization.servieses.CookieService.COOKIE_REFRESH_TOKEN_NAME;
 import static org.springframework.data.mongodb.core.query.Criteria.where;
 import static org.springframework.data.mongodb.core.query.Query.query;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -35,6 +37,9 @@ class AuthIntegrationTest {
 
     @Autowired
     private UserMapperService mapperService;
+
+    @Autowired
+    private AuthServiceImpl authService;
 
 
     private ObjectMapper mapper = new ObjectMapper();
@@ -86,9 +91,8 @@ class AuthIntegrationTest {
                             .content(dtoJson))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.userId").value(createdUserId))
-                    .andExpect(jsonPath("$.accessToken").isString());
-
-
+                    .andExpect(jsonPath("$.accessToken").isString())
+                    .andExpect(cookie().exists(COOKIE_REFRESH_TOKEN_NAME));
         }
 
     }

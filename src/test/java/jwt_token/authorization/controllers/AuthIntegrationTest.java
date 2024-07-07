@@ -1,8 +1,10 @@
 package jwt_token.authorization.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.Cookie;
 import jwt_token.authorization.domain.dto.LoginDto;
 import jwt_token.authorization.domain.dto.UserRegistrationDto;
+import jwt_token.authorization.servieses.TokenService;
 import jwt_token.authorization.servieses.mapping.UserMapperService;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -14,6 +16,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -22,6 +25,7 @@ import static jwt_token.authorization.servieses.AuthServiceImpl.MAX_COUNT_OF_LOG
 import static jwt_token.authorization.servieses.CookieService.COOKIE_REFRESH_TOKEN_NAME;
 import static org.springframework.data.mongodb.core.query.Criteria.where;
 import static org.springframework.data.mongodb.core.query.Query.query;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -41,9 +45,12 @@ class AuthIntegrationTest {
     @Autowired
     private UserMapperService mapperService;
 
+    @Autowired
+    private TokenService tokenService;
+
     private ObjectMapper mapper = new ObjectMapper();
 
-    private String createdUserId;
+    private String createdUserId1;
 
     private static final String USER1_EMAIL = UUID.randomUUID() + "@example.com";
     private static final String USER1_PASSWORD = "Querty123!";
@@ -62,19 +69,20 @@ class AuthIntegrationTest {
                 .password(USER1_PASSWORD)
                 .build();
 
-        createdUserId = mongoTemplate.save(
+        createdUserId1 = mongoTemplate.save(
                         mapperService.toEntity(dto),
                         TEST_COLLECTION_NAME)
                 .getId();
+
     }
 
     @AfterAll
     public void tearDown() {
         mongoTemplate.remove(
-                query(where("_id").is(createdUserId)),
+                query(where("_id").is(createdUserId1)),
                 TEST_COLLECTION_NAME);
         mongoTemplate.remove(
-                query(where("userId").is(createdUserId)),
+                query(where("userId").is(createdUserId1)),
                 TEST_TOKEN_COLLECTION_NAME);
     }
 
@@ -93,7 +101,7 @@ class AuthIntegrationTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(dtoJson))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.userId").value(createdUserId))
+                    .andExpect(jsonPath("$.userId").value(createdUserId1))
                     .andExpect(jsonPath("$.accessToken").isString())
                     .andExpect(cookie().exists(COOKIE_REFRESH_TOKEN_NAME));
         }
@@ -210,4 +218,89 @@ class AuthIntegrationTest {
         }
     }
 
+    @Nested
+    @DisplayName("GET /v1/auth/refresh")
+    class Refresh {
+
+        @Test
+        public void refresh_with_status_200() throws Exception {
+            String dtoJson = mapper.writeValueAsString(
+                    LoginDto.builder()
+                            .email(USER1_EMAIL)
+                            .password(USER1_PASSWORD)
+                            .build());
+
+        MvcResult result= mockMvc.perform(post("/v1/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(dtoJson))
+                    .andExpect(status().isOk())
+                .andReturn();
+        Cookie cookie= result.getResponse().getCookie(COOKIE_REFRESH_TOKEN_NAME);
+
+        mockMvc.perform(get("/v1/auth/refresh")
+                .cookie(cookie))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(createdUserId1))
+                .andExpect(jsonPath("$.accessToken").isString())
+                .andExpect(cookie().exists(COOKIE_REFRESH_TOKEN_NAME));
+        }
+
+        @Test
+        public void refresh_with_status_404_cookie_is_null() throws Exception {
+            mockMvc.perform(get("/v1/auth/refresh"))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        public void refresh_with_status_404_cookie_is_incorrect() throws Exception {
+            Cookie cookie = new Cookie("test", "test");
+            cookie.setPath("/");
+            cookie.setHttpOnly(true);
+            cookie.setSecure(true);
+            cookie.setMaxAge(
+                     TokenService.REFRESH_TOKEN_EXPIRES_IN_MINUTES * 60);
+
+            mockMvc.perform(get("/v1/auth/refresh")
+                    .cookie(cookie))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        public void refresh_with_status_401_token_is_incorrect() throws Exception {
+            Cookie cookie = new Cookie(COOKIE_REFRESH_TOKEN_NAME, "test");
+            cookie.setPath("/");
+            cookie.setHttpOnly(true);
+            cookie.setSecure(true);
+            cookie.setMaxAge(
+                    TokenService.REFRESH_TOKEN_EXPIRES_IN_MINUTES * 60);
+
+            mockMvc.perform(get("/v1/auth/refresh")
+                            .cookie(cookie))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        public void refresh_with_status_401_token_belongs_another_user() throws Exception {
+            String dtoJson = mapper.writeValueAsString(
+                    LoginDto.builder()
+                            .email(USER1_EMAIL)
+                            .password(USER1_PASSWORD)
+                            .build());
+
+            MvcResult result= mockMvc.perform(post("/v1/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(dtoJson))
+                    .andExpect(status().isOk())
+                    .andReturn();
+            Cookie cookie= result.getResponse().getCookie(COOKIE_REFRESH_TOKEN_NAME);
+            String refreshToken = cookie.getValue();
+
+            tokenService.removeOldRefreshToken(refreshToken);
+
+            mockMvc.perform(get("/v1/auth/refresh")
+                            .cookie(cookie))
+                    .andExpect(status().isUnauthorized());
+        }
+
+    }
 }

@@ -42,7 +42,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public TokensDto refresh(String inboundRefreshToken) {
         if (!tokenService.validateRefreshToken(inboundRefreshToken))
-            throw new WrongTokenException("Token is wrong");
+            throw new WrongTokenException("Token is incorrect");
 
         Claims claims = tokenService.getRefreshTokenClaims(inboundRefreshToken);
         User user = (User) userDetailsService.loadUserByUsername(claims.getSubject());

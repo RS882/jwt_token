@@ -1,5 +1,7 @@
 package jwt_token.authorization.exception_handler;
 
+import jwt_token.authorization.exception_handler.bad_request.BadRequestException;
+import jwt_token.authorization.exception_handler.forbidden.ForbiddenException;
 import lombok.extern.slf4j.Slf4j;
 import jwt_token.authorization.exception_handler.dto.ResponseMessageDto;
 import jwt_token.authorization.exception_handler.dto.ValidationErrorDto;
@@ -20,9 +22,25 @@ import java.util.List;
 @Slf4j
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<ResponseMessageDto> handleNotFoundException(BadRequestException e) {
+        return new ResponseEntity<>(new ResponseMessageDto(e.getMessage()), HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ResponseMessageDto> handleNotFoundException(AuthenticationException e) {
         return new ResponseEntity<>(new ResponseMessageDto(e.getMessage()), HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ResponseMessageDto> handleNotFoundException(ForbiddenException e) {
+        return new ResponseEntity<>(new ResponseMessageDto(e.getMessage()), HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<ResponseMessageDto> handleException(RuntimeException e) {
+        log.error("RuntimeException occurred", e);
+        return new ResponseEntity<>(new ResponseMessageDto("Something went wrong"), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

@@ -2,11 +2,12 @@ package jwt_token.authorization.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jwt_token.authorization.domain.dto.LoginDto;
-import jwt_token.authorization.domain.dto.TokensDto;
 import jwt_token.authorization.domain.dto.UserRegistrationDto;
-import jwt_token.authorization.servieses.AuthServiceImpl;
 import jwt_token.authorization.servieses.mapping.UserMapperService;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,6 +16,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static jwt_token.authorization.servieses.CookieService.COOKIE_REFRESH_TOKEN_NAME;
 import static org.springframework.data.mongodb.core.query.Criteria.where;
@@ -38,16 +40,12 @@ class AuthIntegrationTest {
     @Autowired
     private UserMapperService mapperService;
 
-    @Autowired
-    private AuthServiceImpl authService;
-
-
     private ObjectMapper mapper = new ObjectMapper();
 
     private String createdUserId;
 
-    private final String USER1_EMAIL = UUID.randomUUID() + "@example.com";
-    private final String USER1_PASSWORD = "Querty123!";
+    private static final String USER1_EMAIL = UUID.randomUUID() + "@example.com";
+    private static final String USER1_PASSWORD = "Querty123!";
 
     private final String TEST_COLLECTION_NAME = "TempUsers";
 
@@ -95,6 +93,96 @@ class AuthIntegrationTest {
                     .andExpect(cookie().exists(COOKIE_REFRESH_TOKEN_NAME));
         }
 
+        @ParameterizedTest(name = "Тест {index}: login_with_status_400_login_data_is_incorrect [{arguments}]")
+        @MethodSource("incorrectLoginData")
+        public void login_with_status_400_login_data_is_incorrect(LoginDto dto) throws Exception {
+            String dtoJson = mapper.writeValueAsString(dto);
+            mockMvc.perform(post("/v1/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(dtoJson))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.errors").isArray());
+        }
+
+        @ParameterizedTest(name = "Test {index}: login_with_status_404_email_or_password_is_wrong [{arguments}]")
+        @MethodSource("wrongLoginData")
+        public void login_with_status_404_email_or_password_is_wrong(LoginDto dto) throws Exception {
+            String dtoJson = mapper.writeValueAsString(dto);
+            mockMvc.perform(post("/v1/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(dtoJson))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.message").isString());
+        }
+
+
+        private static Stream<Arguments> incorrectLoginData() {
+            return Stream.of(Arguments.of(
+                            LoginDto.builder()
+                                    .email("testexample?com")
+                                    .password(USER1_PASSWORD)
+                                    .build()),
+                    Arguments.of(
+                            LoginDto.builder()
+                                    .password(USER1_PASSWORD)
+                                    .build()),
+                    Arguments.of(
+                            LoginDto.builder()
+                                    .email(USER1_EMAIL)
+                                    .build()),
+                    Arguments.of(
+                            LoginDto.builder()
+                                    .email(USER1_EMAIL)
+                                    .password("1E")
+                                    .build()),
+                    Arguments.of(
+                            LoginDto.builder()
+                                    .email(USER1_EMAIL)
+                                    .password("asdasdlDFsd90q!u023402lks@djalsdajsd#lahsdkahs$$%dllkasd")
+                                    .build()),
+                    Arguments.of(
+                            LoginDto.builder()
+                                    .email(USER1_EMAIL)
+                                    .password("asdasdlweqwe")
+                                    .build()),
+                    Arguments.of(
+                            LoginDto.builder()
+                                    .email(USER1_EMAIL)
+                                    .password("asda@sdlweqwe")
+                                    .build()),
+                    Arguments.of(
+                            LoginDto.builder()
+                                    .email(USER1_EMAIL)
+                                    .password("asdasdlwe8qwe")
+                                    .build()),
+                    Arguments.of(
+                            LoginDto.builder()
+                                    .email(USER1_EMAIL)
+                                    .password("Qsdasdlwe8qwe")
+                                    .build()),
+                    Arguments.of(
+                            LoginDto.builder()
+                                    .email("testexample?com")
+                                    .password("Qsdasdlwe8qwe")
+                                    .build())
+            );
+        }
+
+
+        private static Stream<Arguments> wrongLoginData() {
+            return Stream.of(
+                    Arguments.of(
+                            LoginDto.builder()
+                                    .email(UUID.randomUUID() + "@example.com")
+                                    .password(USER1_PASSWORD)
+                                    .build()),
+                    Arguments.of(
+                            LoginDto.builder()
+                                    .email(USER1_EMAIL)
+                                    .password("doIusjn%70")
+                                    .build())
+            );
+        }
     }
 
 }

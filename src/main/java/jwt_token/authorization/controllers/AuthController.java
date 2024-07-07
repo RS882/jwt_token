@@ -1,5 +1,6 @@
 package jwt_token.authorization.controllers;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jwt_token.authorization.domain.dto.TokensDto;
@@ -8,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import jwt_token.authorization.domain.dto.LoginDto;
 import jwt_token.authorization.domain.dto.TokenResponseDto;
 import jwt_token.authorization.servieses.interfaces.AuthService;
+import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +29,18 @@ public class AuthController {
             HttpServletResponse response) {
 
         TokensDto dto = service.login(loginDto);
+        cookieService.setRefreshTokenToCookie(response, dto.getRefreshToken());
+
+        return ResponseEntity.status(HttpStatus.OK).body(service.getTokenResponseDto(dto));
+    }
+
+    @GetMapping("/refresh")
+    public ResponseEntity<TokenResponseDto> refresh(
+            HttpServletRequest request,
+            HttpServletResponse response) {
+
+        String refreshToken = cookieService.getRefreshTokenFromCookie(request);
+        TokensDto dto = service.refresh(refreshToken);
         cookieService.setRefreshTokenToCookie(response, dto.getRefreshToken());
 
         return ResponseEntity.status(HttpStatus.OK).body(service.getTokenResponseDto(dto));

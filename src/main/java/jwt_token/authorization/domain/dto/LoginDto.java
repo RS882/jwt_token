@@ -20,9 +20,16 @@ public class LoginDto {
     private String email;
 
     @Pattern(
-            regexp = "^(?=.*[A-Za-z])(?=.*\\d)(?=.*[@#$%^&+=!])(?=\\S+$).{8,}$",
-            message = "Password should include at least one letter (A-Z or a-z), one digit (0-9), one special character (@, #, $, %, ^, &, +, =, !), have no spaces, and be at least 8 characters long"
+            regexp = "^(?=.*[A-Za-z])(?=.*\\d)(?=.*[@#$%^&+=!])(?=\\S+$).{8,20}$",
+            message = "Password should include at least one letter (A-Z or a-z)," +
+                    " one digit (0-9), one special character (@, #, $, %, ^, &, +, =, !)," +
+                    " have no spaces,no less than 8 characters and no more than 20"
     )
     @NotNull(message = "Password cannot be empty")
     private String password;
+
+    @Override
+    public String toString() {
+        return String.format("email=%s, password=%s", email, password);
+    }
 }

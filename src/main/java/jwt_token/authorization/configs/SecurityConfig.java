@@ -21,7 +21,7 @@ public class SecurityConfig {
 
     @Bean
     @Order(1)
-    public SecurityFilterChain configureRegistration(HttpSecurity http) throws Exception {
+    public SecurityFilterChain configureAuth(HttpSecurity http) throws Exception {
 
         return http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -30,6 +30,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/v1/registration/user").permitAll()
                         .requestMatchers(HttpMethod.POST,"/v1/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.GET,"/v1/auth/refresh").permitAll()
                         .anyRequest().denyAll()
                 )
                 .httpBasic(AbstractHttpConfigurer::disable)

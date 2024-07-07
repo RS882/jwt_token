@@ -1,9 +1,12 @@
 package jwt_token.authorization.servieses;
 
+import io.jsonwebtoken.Claims;
 import jwt_token.authorization.domain.dto.LoginDto;
 import jwt_token.authorization.domain.dto.TokenResponseDto;
 import jwt_token.authorization.domain.dto.TokensDto;
 import jwt_token.authorization.domain.entity.User;
+import jwt_token.authorization.exception_handler.authentication_exception.WrongTokenException;
+import jwt_token.authorization.exception_handler.forbidden.LimitOfLoginsException;
 import jwt_token.authorization.servieses.interfaces.AuthService;
 import jwt_token.authorization.servieses.mapping.TokenDtoMapperService;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +14,8 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +26,8 @@ public class AuthServiceImpl implements AuthService {
     private final TokenService tokenService;
     private final TokenDtoMapperService tokenDtoMapperService;
 
+    private final int MAX_COUNT_OF_LOGINS = 5;
+
     @Override
     public TokensDto login(LoginDto loginDto) {
         String email = loginDto.getEmail();
@@ -28,19 +35,33 @@ public class AuthServiceImpl implements AuthService {
         if (!encoder.matches(loginDto.getPassword(), user.getPassword()))
             throw new BadCredentialsException("Wrong password");
 
-        String accessToken = tokenService.generateAccessToken(user);
-        String refreshToken = tokenService.generateRefreshToken(user);
+        return tokenService.getTokens(user);
+    }
 
-        tokenService.saveRefreshToken(refreshToken, user.getId());
-        return TokensDto.builder()
-                .userId(user.getId())
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .build();
+    @Override
+    public TokensDto refresh(String inboundRefreshToken) {
+        if (!tokenService.validateRefreshToken(inboundRefreshToken))
+            throw new WrongTokenException("Token is wrong");
+
+        Claims claims = tokenService.getRefreshTokenClaims(inboundRefreshToken);
+        User user = (User) userDetailsService.loadUserByUsername(claims.getSubject());
+        Set<String> refreshTokens = tokenService.getRefreshTokensByUserId(user.getId());
+
+        if (!refreshTokens.contains(inboundRefreshToken))
+            throw new WrongTokenException("Token is wrong");
+
+        TokensDto tokensDto = tokenService.getTokens(user);
+        tokenService.removeOldRefreshToken(inboundRefreshToken);
+        return tokensDto;
     }
 
     @Override
     public TokenResponseDto getTokenResponseDto(TokensDto tokensDto) {
         return tokenDtoMapperService.toResponseDto(tokensDto);
+    }
+
+    private void checkCountOfLogins(String userId) {
+        int currentCount = tokenService.getRefreshTokensByUserId(userId).size();
+        if(currentCount >= MAX_COUNT_OF_LOGINS) throw   new LimitOfLoginsException(userId);
     }
 }

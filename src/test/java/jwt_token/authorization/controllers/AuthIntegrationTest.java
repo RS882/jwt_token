@@ -6,6 +6,7 @@ import jakarta.servlet.http.Cookie;
 import jwt_token.authorization.domain.dto.LoginDto;
 import jwt_token.authorization.domain.dto.UserRegistrationDto;
 import jwt_token.authorization.servieses.TokenService;
+import jwt_token.authorization.servieses.CookieService;
 import jwt_token.authorization.servieses.mapping.UserMapperService;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -25,6 +26,7 @@ import java.util.stream.Stream;
 
 import static jwt_token.authorization.servieses.AuthServiceImpl.MAX_COUNT_OF_LOGINS;
 import static jwt_token.authorization.servieses.CookieService.COOKIE_REFRESH_TOKEN_NAME;
+import static jwt_token.authorization.servieses.CookieService.makeCookie;
 import static org.springframework.data.mongodb.core.query.Criteria.where;
 import static org.springframework.data.mongodb.core.query.Query.query;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -225,21 +227,9 @@ class AuthIntegrationTest {
 
         @Test
         public void refresh_with_status_200() throws Exception {
-            String dtoJson = mapper.writeValueAsString(
-                    LoginDto.builder()
-                            .email(USER1_EMAIL)
-                            .password(USER1_PASSWORD)
-                            .build());
-
-            MvcResult result = mockMvc.perform(post("/v1/auth/login")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(dtoJson))
-                    .andExpect(status().isOk())
-                    .andReturn();
-            Cookie cookie = result.getResponse().getCookie(COOKIE_REFRESH_TOKEN_NAME);
 
             mockMvc.perform(get("/v1/auth/refresh")
-                            .cookie(cookie))
+                            .cookie(getCookie()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.userId").value(createdUserId1))
                     .andExpect(jsonPath("$.accessToken").isString())
@@ -254,13 +244,7 @@ class AuthIntegrationTest {
 
         @Test
         public void refresh_with_status_404_cookie_is_incorrect() throws Exception {
-            Cookie cookie = new Cookie("test", "test");
-            cookie.setPath("/");
-            cookie.setHttpOnly(true);
-            cookie.setSecure(true);
-            cookie.setMaxAge(
-                    TokenService.REFRESH_TOKEN_EXPIRES_IN_MINUTES * 60);
-
+            Cookie cookie = makeCookie("test", "test");
             mockMvc.perform(get("/v1/auth/refresh")
                             .cookie(cookie))
                     .andExpect(status().isBadRequest());
@@ -268,13 +252,7 @@ class AuthIntegrationTest {
 
         @Test
         public void refresh_with_status_401_token_is_incorrect() throws Exception {
-            Cookie cookie = new Cookie(COOKIE_REFRESH_TOKEN_NAME, "test");
-            cookie.setPath("/");
-            cookie.setHttpOnly(true);
-            cookie.setSecure(true);
-            cookie.setMaxAge(
-                    TokenService.REFRESH_TOKEN_EXPIRES_IN_MINUTES * 60);
-
+            Cookie cookie = makeCookie(COOKIE_REFRESH_TOKEN_NAME, "test");
             mockMvc.perform(get("/v1/auth/refresh")
                             .cookie(cookie))
                     .andExpect(status().isUnauthorized());
@@ -282,27 +260,27 @@ class AuthIntegrationTest {
 
         @Test
         public void refresh_with_status_401_token_belongs_another_user() throws Exception {
-            String dtoJson = mapper.writeValueAsString(
-                    LoginDto.builder()
-                            .email(USER1_EMAIL)
-                            .password(USER1_PASSWORD)
-                            .build());
-
-            MvcResult result = mockMvc.perform(post("/v1/auth/login")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(dtoJson))
-                    .andExpect(status().isOk())
-                    .andReturn();
-            Cookie cookie = result.getResponse().getCookie(COOKIE_REFRESH_TOKEN_NAME);
+            Cookie cookie = getCookie();
             String refreshToken = cookie.getValue();
-
             tokenService.removeOldRefreshToken(refreshToken);
-
             mockMvc.perform(get("/v1/auth/refresh")
                             .cookie(cookie))
                     .andExpect(status().isUnauthorized());
         }
 
+        private Cookie getCookie() throws Exception {
+            String dtoJson = mapper.writeValueAsString(
+                    LoginDto.builder()
+                            .email(USER1_EMAIL)
+                            .password(USER1_PASSWORD)
+                            .build());
+            MvcResult result = mockMvc.perform(post("/v1/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(dtoJson))
+                    .andExpect(status().isOk())
+                    .andReturn();
+            return result.getResponse().getCookie(COOKIE_REFRESH_TOKEN_NAME);
+        }
     }
 
     @Nested
@@ -311,28 +289,74 @@ class AuthIntegrationTest {
 
         @Test
         public void validation_with_status_200() throws Exception {
+            mockMvc.perform(get("/v1/auth/validation")
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + getAccessToken()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.userId").value(createdUserId1))
+                    .andExpect(jsonPath("$.isAuthorized").value(true))
+                    .andExpect(jsonPath("$.roles").isArray());
+        }
+
+        @Test
+        public void validation_with_status_401_header_authorization_is_null() throws Exception {
+            mockMvc.perform(get("/v1/auth/validation"))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        public void validation_with_status_401_header_authorization_is_not_bearer() throws Exception {
+            mockMvc.perform(get("/v1/auth/validation")
+                            .header(HttpHeaders.AUTHORIZATION, "Test " + getAccessToken()))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        public void validation_with_status_401_token_is_incorrect() throws Exception {
+            mockMvc.perform(get("/v1/auth/validation")
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + "WRonG!TeSt%TokeN234"))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        public void validation_with_status_401_token_belongs_another_user() throws Exception {
+            UserRegistrationDto dto = UserRegistrationDto
+                    .builder()
+                    .email("user2@example.com")
+                    .password(USER1_PASSWORD)
+                    .build();
+            String createdUserId2 = mongoTemplate.save(
+                            mapperService.toEntity(dto),
+                            TEST_COLLECTION_NAME)
+                    .getId();
+            String tokenUser2 = getAccessToken("user2@example.com", USER1_PASSWORD);
+
+            mongoTemplate.remove(
+                    query(where("_id").is(createdUserId2)),
+                    TEST_COLLECTION_NAME);
+
+            mockMvc.perform(get("/v1/auth/validation")
+                            .header(HttpHeaders.AUTHORIZATION, tokenUser2))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        private String getAccessToken(String email, String password) throws Exception {
             String dtoJson = mapper.writeValueAsString(
                     LoginDto.builder()
-                            .email(USER1_EMAIL)
-                            .password(USER1_PASSWORD)
+                            .email(email)
+                            .password(password)
                             .build());
             MvcResult result = mockMvc.perform(post("/v1/auth/login")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(dtoJson))
                     .andExpect(status().isOk())
                     .andReturn();
-
             String responseToken = result.getResponse().getContentAsString();
             JsonNode jsonNodeToken = mapper.readTree(responseToken);
+            return jsonNodeToken.get("accessToken").asText();
+        }
 
-            String accessToken = jsonNodeToken.get("accessToken").asText();
-
-            mockMvc.perform(get("/v1/auth/validation")
-                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.userId").value(createdUserId1))
-                    .andExpect(jsonPath("$.isAuthorized").value(true))
-                    .andExpect(jsonPath("$.roles").isArray());
+        private String getAccessToken() throws Exception {
+            return getAccessToken(USER1_EMAIL, USER1_PASSWORD);
         }
     }
 }

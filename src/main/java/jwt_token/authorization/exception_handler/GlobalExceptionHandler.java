@@ -1,11 +1,11 @@
 package jwt_token.authorization.exception_handler;
 
 import jwt_token.authorization.exception_handler.bad_request.BadRequestException;
-import jwt_token.authorization.exception_handler.forbidden.ForbiddenException;
-import lombok.extern.slf4j.Slf4j;
 import jwt_token.authorization.exception_handler.dto.ResponseMessageDto;
 import jwt_token.authorization.exception_handler.dto.ValidationErrorDto;
 import jwt_token.authorization.exception_handler.dto.ValidationErrorsDto;
+import jwt_token.authorization.exception_handler.forbidden.ForbiddenException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.AuthenticationException;

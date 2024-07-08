@@ -4,6 +4,8 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jwt_token.authorization.contstants.Role;
+import jwt_token.authorization.domain.AuthInfo;
 import jwt_token.authorization.domain.dto.TokensDto;
 import jwt_token.authorization.domain.entity.RefreshToken;
 import jwt_token.authorization.domain.entity.User;
@@ -17,6 +19,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -27,7 +30,7 @@ public class TokenService {
     private final SecretKey ACCESS_KEY;
     private final SecretKey REFRESH_KEY;
 
-    public static final int ACCESS_TOKEN_EXPIRES_IN_MINUTES = 15;
+    public static final int ACCESS_TOKEN_EXPIRES_IN_MINUTES = 60;
     public static final int REFRESH_TOKEN_EXPIRES_IN_MINUTES = 15 * 24 * 60;
     public static final String USER_ROLE_VARIABLE_NAME = "role";
     public static final String USER_EMAIL_VARIABLE_NAME = "email";
@@ -85,6 +88,17 @@ public class TokenService {
 
     public void removeOldRefreshToken(String oldRefreshToken) {
         repository.deleteAllByToken(oldRefreshToken);
+    }
+
+    public AuthInfo mapClaims(Claims claims) {
+        String userEmail = claims.getSubject();
+        List<String> roleList = (List<String>) claims.get(USER_ROLE_VARIABLE_NAME);
+        Set<Role> roles = new HashSet<>();
+
+        for (String role : roleList) {
+            roles.add(Role.valueOf(role));
+        }
+        return new AuthInfo(userEmail, roles);
     }
 
     private String generateAccessToken(User user) {

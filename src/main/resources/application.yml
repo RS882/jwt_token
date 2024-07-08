@@ -19,4 +19,5 @@ rsa:
 #logging:
 #  level:
 #    org:
-#      springframework: DEBUG
+#      springframework:
+#        security: TRACE

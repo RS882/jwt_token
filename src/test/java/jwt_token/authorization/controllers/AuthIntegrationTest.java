@@ -73,7 +73,6 @@ class AuthIntegrationTest {
                         mapperService.toEntity(dto),
                         TEST_COLLECTION_NAME)
                 .getId();
-
     }
 
     @AfterAll

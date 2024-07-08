@@ -1,9 +1,11 @@
 package jwt_token.authorization.servieses;
 
 import io.jsonwebtoken.Claims;
+import jwt_token.authorization.contstants.Role;
 import jwt_token.authorization.domain.dto.LoginDto;
 import jwt_token.authorization.domain.dto.TokenResponseDto;
 import jwt_token.authorization.domain.dto.TokensDto;
+import jwt_token.authorization.domain.dto.ValidationResponseDto;
 import jwt_token.authorization.domain.entity.User;
 import jwt_token.authorization.exception_handler.authentication_exception.WrongTokenException;
 import jwt_token.authorization.exception_handler.forbidden.LimitOfLoginsException;
@@ -11,12 +13,15 @@ import jwt_token.authorization.servieses.interfaces.AuthService;
 import jwt_token.authorization.servieses.mapping.TokenDtoMapperService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Set;
+
+import static jwt_token.authorization.servieses.TokenService.USER_ROLE_VARIABLE_NAME;
 
 @Service
 @RequiredArgsConstructor
@@ -54,6 +59,20 @@ public class AuthServiceImpl implements AuthService {
         TokensDto tokensDto = tokenService.getTokens(user);
         tokenService.removeOldRefreshToken(inboundRefreshToken);
         return tokensDto;
+    }
+
+    @Override
+    public ValidationResponseDto validation( String authorizationHeader) {
+
+        String token = authorizationHeader.substring(7);
+        Claims claims = tokenService.getAccessTokenClaims(token);
+        User user = (User) userDetailsService.loadUserByUsername(claims.getSubject());
+
+        return ValidationResponseDto.builder()
+                .isAuthorized(true)
+                .roles((List) claims.get(USER_ROLE_VARIABLE_NAME))
+                .userId(user.getId())
+                .build();
     }
 
     @Override

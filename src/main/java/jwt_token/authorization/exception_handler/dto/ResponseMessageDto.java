@@ -11,4 +11,6 @@ public class ResponseMessageDto {
 
 //        @Schema(description = "Message ", example = "Some text message")
         private String message;
+
+
 }

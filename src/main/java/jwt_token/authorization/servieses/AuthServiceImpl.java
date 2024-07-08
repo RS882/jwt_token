@@ -1,6 +1,7 @@
 package jwt_token.authorization.servieses;
 
 import io.jsonwebtoken.Claims;
+import jakarta.servlet.http.HttpServletRequest;
 import jwt_token.authorization.contstants.Role;
 import jwt_token.authorization.domain.dto.LoginDto;
 import jwt_token.authorization.domain.dto.TokenResponseDto;
@@ -14,7 +15,9 @@ import jwt_token.authorization.servieses.mapping.TokenDtoMapperService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -31,6 +34,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder encoder;
     private final TokenService tokenService;
     private final TokenDtoMapperService tokenDtoMapperService;
+    private final CookieService cookieService;
 
     public static final int MAX_COUNT_OF_LOGINS = 5;
 
@@ -45,7 +49,8 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public TokensDto refresh(String inboundRefreshToken) {
+    public TokensDto refresh( HttpServletRequest request) {
+        String inboundRefreshToken = cookieService.getRefreshTokenFromCookie(request);
         if (!tokenService.validateRefreshToken(inboundRefreshToken))
             throw new WrongTokenException("Token is incorrect");
 
@@ -73,6 +78,13 @@ public class AuthServiceImpl implements AuthService {
                 .roles((List) claims.get(USER_ROLE_VARIABLE_NAME))
                 .userId(user.getId())
                 .build();
+    }
+
+    @Override
+    public void logout(HttpServletRequest request) {
+        String refreshToken = cookieService.getRefreshTokenFromCookie(request);
+        tokenService.removeOldRefreshToken(refreshToken);
+        SecurityContextHolder.clearContext();
     }
 
     @Override

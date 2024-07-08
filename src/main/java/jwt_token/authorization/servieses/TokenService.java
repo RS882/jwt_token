@@ -30,7 +30,7 @@ public class TokenService {
     private final SecretKey ACCESS_KEY;
     private final SecretKey REFRESH_KEY;
 
-    public static final int ACCESS_TOKEN_EXPIRES_IN_MINUTES = 60;
+    public static final int ACCESS_TOKEN_EXPIRES_IN_MINUTES = 1;
     public static final int REFRESH_TOKEN_EXPIRES_IN_MINUTES = 15 * 24 * 60;
     public static final String USER_ROLE_VARIABLE_NAME = "role";
     public static final String USER_EMAIL_VARIABLE_NAME = "email";

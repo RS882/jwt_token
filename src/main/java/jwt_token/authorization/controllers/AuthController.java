@@ -3,18 +3,16 @@ package jwt_token.authorization.controllers;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import jwt_token.authorization.domain.dto.LoginDto;
+import jwt_token.authorization.domain.dto.TokenResponseDto;
 import jwt_token.authorization.domain.dto.TokensDto;
 import jwt_token.authorization.domain.dto.ValidationResponseDto;
 import jwt_token.authorization.servieses.CookieService;
-import lombok.RequiredArgsConstructor;
-import jwt_token.authorization.domain.dto.LoginDto;
-import jwt_token.authorization.domain.dto.TokenResponseDto;
 import jwt_token.authorization.servieses.interfaces.AuthService;
-import org.springframework.http.HttpCookie;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -42,8 +40,7 @@ public class AuthController {
             HttpServletRequest request,
             HttpServletResponse response) {
 
-        String refreshToken = cookieService.getRefreshTokenFromCookie(request);
-        TokensDto dto = service.refresh(refreshToken);
+        TokensDto dto = service.refresh(request);
         cookieService.setRefreshTokenToCookie(response, dto.getRefreshToken());
 
         return ResponseEntity.status(HttpStatus.OK).body(service.getTokenResponseDto(dto));
@@ -54,5 +51,14 @@ public class AuthController {
             @RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
 
         return ResponseEntity.status(HttpStatus.OK).body(service.validation(authorizationHeader));
+    }
+
+    @GetMapping("/logout")
+    public void logout(
+            HttpServletRequest request,
+            HttpServletResponse response) {
+
+        service.logout(request);
+        cookieService.setRefreshTokenToCookie(response, null);
     }
 }

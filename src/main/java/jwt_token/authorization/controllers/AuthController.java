@@ -51,11 +51,8 @@ public class AuthController {
 
     @GetMapping("/validation")
     public ResponseEntity<ValidationResponseDto> validation(
-
             @RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
 
-        ValidationResponseDto dto = service.validation( authorizationHeader);
-
-        return ResponseEntity.status(HttpStatus.OK).body(dto);
+        return ResponseEntity.status(HttpStatus.OK).body(service.validation(authorizationHeader));
     }
 }

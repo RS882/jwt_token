@@ -6,7 +6,6 @@ import jakarta.servlet.http.Cookie;
 import jwt_token.authorization.domain.dto.LoginDto;
 import jwt_token.authorization.domain.dto.UserRegistrationDto;
 import jwt_token.authorization.servieses.TokenService;
-import jwt_token.authorization.servieses.CookieService;
 import jwt_token.authorization.servieses.mapping.UserMapperService;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -62,6 +61,12 @@ class AuthIntegrationTest {
     private final String TEST_COLLECTION_NAME = "TempUsers";
     private final String TEST_TOKEN_COLLECTION_NAME = "RefreshToken";
 
+
+    private final String LOGIN_URL = "/v1/auth/login";
+    private final String REFRESH_URL = "/v1/auth/refresh";
+    private final String VALIDATION_URL = "/v1/auth/validation";
+    private final String LOGOUT_URL = "/v1/auth/logout";
+
     @BeforeAll
     public void setUp() {
         if (!mongoTemplate.collectionExists(TEST_COLLECTION_NAME))
@@ -89,6 +94,78 @@ class AuthIntegrationTest {
                 TEST_TOKEN_COLLECTION_NAME);
     }
 
+    private void _401_header_authorization_is_null(String path) throws Exception {
+        mockMvc.perform(get(path))
+                .andExpect(status().isUnauthorized());
+    }
+
+    private void _401_header_authorization_is_not_bearer(String path) throws Exception {
+        mockMvc.perform(get(path)
+                        .header(HttpHeaders.AUTHORIZATION, "Test " + getAccessToken()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    private void _401_token_is_incorrect(String path) throws Exception {
+        mockMvc.perform(get(path)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + "WRonG!TeSt%TokeN234"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    private void _401_token_belongs_another_user(String path) throws Exception {
+        UserRegistrationDto dto = UserRegistrationDto
+                .builder()
+                .email("user2@example.com")
+                .password(USER1_PASSWORD)
+                .build();
+        String createdUserId2 = mongoTemplate.save(
+                        mapperService.toEntity(dto),
+                        TEST_COLLECTION_NAME)
+                .getId();
+        String tokenUser2 = getAccessToken("user2@example.com", USER1_PASSWORD);
+
+        mongoTemplate.remove(
+                query(where("_id").is(createdUserId2)),
+                TEST_COLLECTION_NAME);
+
+        mockMvc.perform(get(path)
+                        .header(HttpHeaders.AUTHORIZATION, tokenUser2))
+                .andExpect(status().isUnauthorized());
+    }
+
+    private Cookie getCookie() throws Exception {
+        String dtoJson = mapper.writeValueAsString(
+                LoginDto.builder()
+                        .email(USER1_EMAIL)
+                        .password(USER1_PASSWORD)
+                        .build());
+        MvcResult result = mockMvc.perform(post(LOGIN_URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(dtoJson))
+                .andExpect(status().isOk())
+                .andReturn();
+        return result.getResponse().getCookie(COOKIE_REFRESH_TOKEN_NAME);
+    }
+
+    private String getAccessToken(String email, String password) throws Exception {
+        String dtoJson = mapper.writeValueAsString(
+                LoginDto.builder()
+                        .email(email)
+                        .password(password)
+                        .build());
+        MvcResult result = mockMvc.perform(post(LOGIN_URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(dtoJson))
+                .andExpect(status().isOk())
+                .andReturn();
+        String responseToken = result.getResponse().getContentAsString();
+        JsonNode jsonNodeToken = mapper.readTree(responseToken);
+        return jsonNodeToken.get("accessToken").asText();
+    }
+
+    private String getAccessToken() throws Exception {
+        return getAccessToken(USER1_EMAIL, USER1_PASSWORD);
+    }
+
     @Nested
     @DisplayName("POST /v1/auth/login")
     class Login {
@@ -100,7 +177,7 @@ class AuthIntegrationTest {
                             .email(USER1_EMAIL)
                             .password(USER1_PASSWORD)
                             .build());
-            mockMvc.perform(post("/v1/auth/login")
+            mockMvc.perform(post(LOGIN_URL)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(dtoJson))
                     .andExpect(status().isOk())
@@ -113,7 +190,7 @@ class AuthIntegrationTest {
         @MethodSource("incorrectLoginData")
         public void login_with_status_400_login_data_is_incorrect(LoginDto dto) throws Exception {
             String dtoJson = mapper.writeValueAsString(dto);
-            mockMvc.perform(post("/v1/auth/login")
+            mockMvc.perform(post(LOGIN_URL)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(dtoJson))
                     .andExpect(status().isBadRequest())
@@ -124,7 +201,7 @@ class AuthIntegrationTest {
         @MethodSource("wrongLoginData")
         public void login_with_status_404_email_or_password_is_wrong(LoginDto dto) throws Exception {
             String dtoJson = mapper.writeValueAsString(dto);
-            mockMvc.perform(post("/v1/auth/login")
+            mockMvc.perform(post(LOGIN_URL)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(dtoJson))
                     .andExpect(status().isUnauthorized())
@@ -133,23 +210,41 @@ class AuthIntegrationTest {
 
         @Test
         public void login_with_status_403_count_of_logins_is_more_than_maximum() throws Exception {
+            UUID random = UUID.randomUUID();
+            UserRegistrationDto dto = UserRegistrationDto
+                    .builder()
+                    .email(random + "@example.com")
+                    .password(USER1_PASSWORD)
+                    .build();
+
+            String createdUserId2 = mongoTemplate.save(
+                            mapperService.toEntity(dto),
+                            TEST_COLLECTION_NAME)
+                    .getId();
 
             String dtoJson = mapper.writeValueAsString(
                     LoginDto.builder()
-                            .email(USER1_EMAIL)
+                            .email(random + "@example.com")
                             .password(USER1_PASSWORD)
                             .build());
-            for (int i = 0; i < MAX_COUNT_OF_LOGINS - 1; i++) {
-                mockMvc.perform(post("/v1/auth/login")
+            for (int i = 0; i < MAX_COUNT_OF_LOGINS; i++) {
+                mockMvc.perform(post(LOGIN_URL)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(dtoJson))
                         .andExpect(status().isOk());
             }
 
-            mockMvc.perform(post("/v1/auth/login")
+            mockMvc.perform(post(LOGIN_URL)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(dtoJson))
                     .andExpect(status().isForbidden());
+
+            mongoTemplate.remove(
+                    query(where("_id").is(createdUserId2)),
+                    TEST_COLLECTION_NAME);
+            mongoTemplate.remove(
+                    query(where("userId").is(createdUserId2)),
+                    TEST_TOKEN_COLLECTION_NAME);
         }
 
         private static Stream<Arguments> incorrectLoginData() {
@@ -228,7 +323,7 @@ class AuthIntegrationTest {
         @Test
         public void refresh_with_status_200() throws Exception {
 
-            mockMvc.perform(get("/v1/auth/refresh")
+            mockMvc.perform(get(REFRESH_URL)
                             .cookie(getCookie()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.userId").value(createdUserId1))
@@ -238,14 +333,14 @@ class AuthIntegrationTest {
 
         @Test
         public void refresh_with_status_404_cookie_is_null() throws Exception {
-            mockMvc.perform(get("/v1/auth/refresh"))
+            mockMvc.perform(get(REFRESH_URL))
                     .andExpect(status().isBadRequest());
         }
 
         @Test
         public void refresh_with_status_404_cookie_is_incorrect() throws Exception {
             Cookie cookie = makeCookie("test", "test");
-            mockMvc.perform(get("/v1/auth/refresh")
+            mockMvc.perform(get(REFRESH_URL)
                             .cookie(cookie))
                     .andExpect(status().isBadRequest());
         }
@@ -253,7 +348,7 @@ class AuthIntegrationTest {
         @Test
         public void refresh_with_status_401_token_is_incorrect() throws Exception {
             Cookie cookie = makeCookie(COOKIE_REFRESH_TOKEN_NAME, "test");
-            mockMvc.perform(get("/v1/auth/refresh")
+            mockMvc.perform(get(REFRESH_URL)
                             .cookie(cookie))
                     .andExpect(status().isUnauthorized());
         }
@@ -263,23 +358,9 @@ class AuthIntegrationTest {
             Cookie cookie = getCookie();
             String refreshToken = cookie.getValue();
             tokenService.removeOldRefreshToken(refreshToken);
-            mockMvc.perform(get("/v1/auth/refresh")
+            mockMvc.perform(get(REFRESH_URL)
                             .cookie(cookie))
                     .andExpect(status().isUnauthorized());
-        }
-
-        private Cookie getCookie() throws Exception {
-            String dtoJson = mapper.writeValueAsString(
-                    LoginDto.builder()
-                            .email(USER1_EMAIL)
-                            .password(USER1_PASSWORD)
-                            .build());
-            MvcResult result = mockMvc.perform(post("/v1/auth/login")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(dtoJson))
-                    .andExpect(status().isOk())
-                    .andReturn();
-            return result.getResponse().getCookie(COOKIE_REFRESH_TOKEN_NAME);
         }
     }
 
@@ -289,7 +370,7 @@ class AuthIntegrationTest {
 
         @Test
         public void validation_with_status_200() throws Exception {
-            mockMvc.perform(get("/v1/auth/validation")
+            mockMvc.perform(get(VALIDATION_URL)
                             .header(HttpHeaders.AUTHORIZATION, "Bearer " + getAccessToken()))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.userId").value(createdUserId1))
@@ -299,64 +380,57 @@ class AuthIntegrationTest {
 
         @Test
         public void validation_with_status_401_header_authorization_is_null() throws Exception {
-            mockMvc.perform(get("/v1/auth/validation"))
-                    .andExpect(status().isUnauthorized());
+            _401_header_authorization_is_null(VALIDATION_URL);
         }
 
         @Test
         public void validation_with_status_401_header_authorization_is_not_bearer() throws Exception {
-            mockMvc.perform(get("/v1/auth/validation")
-                            .header(HttpHeaders.AUTHORIZATION, "Test " + getAccessToken()))
-                    .andExpect(status().isUnauthorized());
+            _401_header_authorization_is_not_bearer(VALIDATION_URL);
         }
 
         @Test
         public void validation_with_status_401_token_is_incorrect() throws Exception {
-            mockMvc.perform(get("/v1/auth/validation")
-                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + "WRonG!TeSt%TokeN234"))
-                    .andExpect(status().isUnauthorized());
+            _401_token_is_incorrect(VALIDATION_URL);
         }
 
         @Test
         public void validation_with_status_401_token_belongs_another_user() throws Exception {
-            UserRegistrationDto dto = UserRegistrationDto
-                    .builder()
-                    .email("user2@example.com")
-                    .password(USER1_PASSWORD)
-                    .build();
-            String createdUserId2 = mongoTemplate.save(
-                            mapperService.toEntity(dto),
-                            TEST_COLLECTION_NAME)
-                    .getId();
-            String tokenUser2 = getAccessToken("user2@example.com", USER1_PASSWORD);
-
-            mongoTemplate.remove(
-                    query(where("_id").is(createdUserId2)),
-                    TEST_COLLECTION_NAME);
-
-            mockMvc.perform(get("/v1/auth/validation")
-                            .header(HttpHeaders.AUTHORIZATION, tokenUser2))
-                    .andExpect(status().isUnauthorized());
+            _401_token_belongs_another_user(VALIDATION_URL);
         }
+    }
 
-        private String getAccessToken(String email, String password) throws Exception {
-            String dtoJson = mapper.writeValueAsString(
-                    LoginDto.builder()
-                            .email(email)
-                            .password(password)
-                            .build());
-            MvcResult result = mockMvc.perform(post("/v1/auth/login")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(dtoJson))
+    @Nested
+    @DisplayName("GET /v1/auth/logout")
+    class Logout {
+
+        @Test
+        public void logout_with_status_200() throws Exception {
+            Cookie cookie = getCookie();
+            mockMvc.perform(get(LOGOUT_URL)
+                            .cookie(cookie)
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + getAccessToken()))
                     .andExpect(status().isOk())
+                    .andExpect(cookie().value(COOKIE_REFRESH_TOKEN_NAME, (String) null))
                     .andReturn();
-            String responseToken = result.getResponse().getContentAsString();
-            JsonNode jsonNodeToken = mapper.readTree(responseToken);
-            return jsonNodeToken.get("accessToken").asText();
+        }
+        @Test
+        public void logout_with_status_401_header_authorization_is_null() throws Exception {
+            _401_header_authorization_is_null(LOGOUT_URL);
         }
 
-        private String getAccessToken() throws Exception {
-            return getAccessToken(USER1_EMAIL, USER1_PASSWORD);
+        @Test
+        public void logout_with_status_401_header_authorization_is_not_bearer() throws Exception {
+            _401_header_authorization_is_not_bearer(LOGOUT_URL);
+        }
+
+        @Test
+        public void logout_with_status_401_token_is_incorrect() throws Exception {
+            _401_token_is_incorrect(LOGOUT_URL);
+        }
+
+        @Test
+        public void logout_with_status_401_token_belongs_another_user() throws Exception {
+            _401_token_belongs_another_user(LOGOUT_URL);
         }
     }
 }

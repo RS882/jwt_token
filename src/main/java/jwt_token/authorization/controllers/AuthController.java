@@ -16,18 +16,17 @@ import jwt_token.authorization.domain.dto.TokenResponseDto;
 import jwt_token.authorization.domain.dto.TokensDto;
 import jwt_token.authorization.domain.dto.ValidationResponseDto;
 import jwt_token.authorization.exception_handler.dto.ResponseMessageDto;
-import jwt_token.authorization.servieses.CookieService;
-import jwt_token.authorization.servieses.interfaces.AuthService;
+import jwt_token.authorization.services.CookieService;
+import jwt_token.authorization.services.interfaces.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import static jwt_token.authorization.servieses.AuthServiceImpl.MAX_COUNT_OF_LOGINS;
-import static jwt_token.authorization.servieses.CookieService.COOKIE_REFRESH_TOKEN_NAME;
-import static jwt_token.authorization.servieses.TokenService.ACCESS_TOKEN_EXPIRES_IN_MINUTES;
-import static jwt_token.authorization.servieses.TokenService.REFRESH_TOKEN_EXPIRES_IN_MINUTES;
+import static jwt_token.authorization.services.CookieService.COOKIE_REFRESH_TOKEN_NAME;
+import static jwt_token.authorization.services.TokenService.ACCESS_TOKEN_EXPIRES_IN_MINUTES;
+import static jwt_token.authorization.services.TokenService.REFRESH_TOKEN_EXPIRES_IN_MINUTES;
 
 @RestController
 @RequestMapping("/v1/auth")

@@ -1,4 +1,4 @@
-package jwt_token.authorization.servieses;
+package jwt_token.authorization.services;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -11,10 +11,6 @@ import jwt_token.authorization.domain.entity.RefreshToken;
 import jwt_token.authorization.domain.entity.User;
 import jwt_token.authorization.exception_handler.exceptions.not_found.TokenNotFoundException;
 import jwt_token.authorization.repositorys.TokenRepository;
-import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 

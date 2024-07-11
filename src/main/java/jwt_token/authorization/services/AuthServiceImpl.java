@@ -1,4 +1,4 @@
-package jwt_token.authorization.servieses;
+package jwt_token.authorization.services;
 
 import io.jsonwebtoken.Claims;
 import jwt_token.authorization.domain.dto.LoginDto;
@@ -7,8 +7,8 @@ import jwt_token.authorization.domain.dto.TokensDto;
 import jwt_token.authorization.domain.dto.ValidationResponseDto;
 import jwt_token.authorization.domain.entity.User;
 import jwt_token.authorization.exception_handler.authentication_exception.WrongTokenException;
-import jwt_token.authorization.servieses.interfaces.AuthService;
-import jwt_token.authorization.servieses.mapping.TokenDtoMapperService;
+import jwt_token.authorization.services.interfaces.AuthService;
+import jwt_token.authorization.services.mapping.TokenDtoMapperService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -19,7 +19,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-import static jwt_token.authorization.servieses.TokenService.USER_ROLE_VARIABLE_NAME;
+import static jwt_token.authorization.services.TokenService.USER_ROLE_VARIABLE_NAME;
 
 @Service
 @RequiredArgsConstructor

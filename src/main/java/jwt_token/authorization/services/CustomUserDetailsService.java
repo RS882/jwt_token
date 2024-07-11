@@ -1,4 +1,4 @@
-package jwt_token.authorization.servieses;
+package jwt_token.authorization.services;
 
 import lombok.RequiredArgsConstructor;
 import jwt_token.authorization.repositorys.UserRepository;

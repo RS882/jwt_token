@@ -24,8 +24,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import static jwt_token.authorization.servieses.AuthServiceImpl.MAX_COUNT_OF_LOGINS;
-import static jwt_token.authorization.servieses.CookieService.COOKIE_REFRESH_TOKEN_NAME;
+import static jwt_token.authorization.services.CookieService.COOKIE_REFRESH_TOKEN_NAME;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;

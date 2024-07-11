@@ -1,4 +1,4 @@
-package jwt_token.authorization.servieses.mapping;
+package jwt_token.authorization.services.mapping;
 
 import jwt_token.authorization.domain.dto.UserDto;
 import jwt_token.authorization.domain.dto.UserRegistrationDto;

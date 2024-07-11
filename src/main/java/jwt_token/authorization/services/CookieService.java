@@ -1,4 +1,4 @@
-package jwt_token.authorization.servieses;
+package jwt_token.authorization.services;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;

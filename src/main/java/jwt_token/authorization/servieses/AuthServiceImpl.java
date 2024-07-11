@@ -1,40 +1,36 @@
 package jwt_token.authorization.servieses;
 
 import io.jsonwebtoken.Claims;
-import jakarta.servlet.http.HttpServletRequest;
-import jwt_token.authorization.contstants.Role;
 import jwt_token.authorization.domain.dto.LoginDto;
 import jwt_token.authorization.domain.dto.TokenResponseDto;
 import jwt_token.authorization.domain.dto.TokensDto;
 import jwt_token.authorization.domain.dto.ValidationResponseDto;
 import jwt_token.authorization.domain.entity.User;
 import jwt_token.authorization.exception_handler.authentication_exception.WrongTokenException;
-import jwt_token.authorization.exception_handler.forbidden.LimitOfLoginsException;
 import jwt_token.authorization.servieses.interfaces.AuthService;
 import jwt_token.authorization.servieses.mapping.TokenDtoMapperService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Set;
 
 import static jwt_token.authorization.servieses.TokenService.USER_ROLE_VARIABLE_NAME;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthServiceImpl implements AuthService {
 
     private final UserDetailsService userDetailsService;
     private final PasswordEncoder encoder;
     private final TokenService tokenService;
     private final TokenDtoMapperService tokenDtoMapperService;
-    private final CookieService cookieService;
+
 
     public static final int MAX_COUNT_OF_LOGINS = 5;
 
@@ -49,7 +45,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public TokensDto refresh( String inboundRefreshToken) {
+    public TokensDto refresh(String inboundRefreshToken) {
 
         if (!tokenService.validateRefreshToken(inboundRefreshToken))
             throw new WrongTokenException("Token is incorrect");
@@ -67,7 +63,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public ValidationResponseDto validation( String authorizationHeader) {
+    public ValidationResponseDto validation(String authorizationHeader) {
 
         String token = authorizationHeader.substring(7);
         Claims claims = tokenService.getAccessTokenClaims(token);
@@ -91,11 +87,12 @@ public class AuthServiceImpl implements AuthService {
         return tokenDtoMapperService.toResponseDto(tokensDto);
     }
 
-    private  void checkCountOfLogins(String userId) {
-        int currentCount = tokenService.getRefreshTokensByUserId(userId).size();
+    private void checkCountOfLogins(String userId) {
+        List<String> refreshTokens = tokenService.getRefreshTokensByUserId(userId);
 
-        if (currentCount >= MAX_COUNT_OF_LOGINS)
-            throw new LimitOfLoginsException(userId);
-
+        if (refreshTokens.size() >= MAX_COUNT_OF_LOGINS) {
+            refreshTokens.forEach(tokenService::removeOldRefreshToken);
+            log.warn("User {} has limit of logins :{}.", userId,MAX_COUNT_OF_LOGINS);
+        }
     }
 }

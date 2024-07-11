@@ -17,6 +17,7 @@ public abstract class UserMapperService {
     @Mapping(target = "isActive", constant = "true")
     @Mapping(target = "role", expression = "java(jwt_token.authorization.contstants.Role.ROLE_USER)")
     @Mapping(target="password", expression = "java(encoder.encode(dto.getPassword()))")
+    @Mapping(target = "loginBlockedUntil", expression = "java(java.time.LocalDateTime.now())"  )
     public abstract User toEntity(UserRegistrationDto dto);
 
     public abstract UserDto toDto(User user);

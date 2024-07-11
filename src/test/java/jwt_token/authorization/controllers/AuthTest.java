@@ -194,20 +194,6 @@ public class AuthTest {
             }
         }
 
-        @Test
-        public void login_with_status_403_count_of_logins_is_more_than_maximum() {
-
-            HttpEntity<LoginDto> request = new HttpEntity<>(dto, headers);
-
-            for (int i = 0; i < MAX_COUNT_OF_LOGINS; i++) {
-
-                template.postForEntity(URL, request, TokenResponseDto.class);
-            }
-            ResponseEntity<TokenResponseDto> response =
-                    template.postForEntity(URL, request, TokenResponseDto.class);
-            assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Response has unexpected status");
-        }
-
         private static Stream<Arguments> incorrectLoginData() {
             return Stream.of(Arguments.of(
                             LoginDto.builder()

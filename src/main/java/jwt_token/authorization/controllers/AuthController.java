@@ -62,12 +62,6 @@ public class AuthController {
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = ResponseMessageDto.class)
-                    )),
-            @ApiResponse(responseCode = "403",
-                    description = "Count of user's logins is more than maximum(" + MAX_COUNT_OF_LOGINS + ")",
-                    content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(implementation = ResponseMessageDto.class)
                     ))}
     )
     public ResponseEntity<TokenResponseDto> login(

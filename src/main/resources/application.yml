@@ -7,7 +7,7 @@ spring:
 server:
   servlet:
     context-path: /api
-  port: 8045
+  port: ${PORT:8045}
 key:
   access: ${ACCESS_SECRET}
   refresh: ${REFRESH_SECRET}

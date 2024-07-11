@@ -4,7 +4,6 @@ import jwt_token.authorization.exception_handler.bad_request.BadRequestException
 import jwt_token.authorization.exception_handler.dto.ResponseMessageDto;
 import jwt_token.authorization.exception_handler.dto.ValidationErrorDto;
 import jwt_token.authorization.exception_handler.dto.ValidationErrorsDto;
-import jwt_token.authorization.exception_handler.forbidden.ForbiddenException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,7 +14,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestCookieException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,11 +30,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ResponseMessageDto> handleNotFoundException(AuthenticationException e) {
         return new ResponseEntity<>(new ResponseMessageDto(e.getMessage()), HttpStatus.UNAUTHORIZED);
-    }
-
-    @ExceptionHandler(ForbiddenException.class)
-    public ResponseEntity<ResponseMessageDto> handleNotFoundException(ForbiddenException e) {
-        return new ResponseEntity<>(new ResponseMessageDto(e.getMessage()), HttpStatus.FORBIDDEN);
     }
 
     @ExceptionHandler(MissingRequestCookieException.class)

@@ -49,8 +49,8 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public TokensDto refresh( HttpServletRequest request) {
-        String inboundRefreshToken = cookieService.getRefreshTokenFromCookie(request);
+    public TokensDto refresh( String inboundRefreshToken) {
+
         if (!tokenService.validateRefreshToken(inboundRefreshToken))
             throw new WrongTokenException("Token is incorrect");
 
@@ -81,8 +81,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public void logout(HttpServletRequest request) {
-        String refreshToken = cookieService.getRefreshTokenFromCookie(request);
+    public void logout(String refreshToken) {
         tokenService.removeOldRefreshToken(refreshToken);
         SecurityContextHolder.clearContext();
     }

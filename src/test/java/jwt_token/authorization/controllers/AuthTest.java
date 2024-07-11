@@ -321,20 +321,15 @@ public class AuthTest {
         }
 
         @Test
-        public void refresh_with_status_404_cookie_is_null() {
-
-            headers.add("Set-Cookie", " Path=/; HttpOnly; Secure; Max-Age=" + (15 * 60));
-            headers.set("Content-Type", "application/json");
-
+        public void refresh_with_status_400_cookie_is_null() {
             HttpEntity<Object> httpEntity = new HttpEntity<>(headers);
-
             ResponseEntity<TokenResponseDto> responseRefresh =
                     template.exchange(URL, HttpMethod.GET, httpEntity, TokenResponseDto.class);
             assertEquals(HttpStatus.BAD_REQUEST, responseRefresh.getStatusCode(), "Response has unexpected status");
         }
 
         @Test
-        public void refresh_with_status_404_cookie_is_incorrect() {
+        public void refresh_with_status_400_cookie_is_incorrect() {
             String refreshToken = "test";
             headers.add("test", refreshToken);
 
@@ -346,7 +341,6 @@ public class AuthTest {
             ResponseEntity<TokenResponseDto> responseRefresh =
                     template.exchange(URL, HttpMethod.GET, httpEntity, TokenResponseDto.class);
             assertEquals(HttpStatus.BAD_REQUEST, responseRefresh.getStatusCode(), "Response has unexpected status");
-
         }
 
         @Test

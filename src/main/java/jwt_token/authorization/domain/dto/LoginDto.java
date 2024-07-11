@@ -1,5 +1,6 @@
 package jwt_token.authorization.domain.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -9,6 +10,7 @@ import lombok.Data;
 
 @Data
 @Builder
+@Schema(name = "Login data", description = "User credentials")
 public class LoginDto {
 
     @Email(
@@ -17,6 +19,7 @@ public class LoginDto {
             flags = Pattern.Flag.CASE_INSENSITIVE
     )
     @NotNull(message = "Email cannot be null")
+    @Schema(description = "User Email", example = "example@mail.com")
     private String email;
 
     @Pattern(
@@ -26,6 +29,7 @@ public class LoginDto {
                     " have no spaces,no less than 8 characters and no more than 20"
     )
     @NotNull(message = "Password cannot be empty")
+    @Schema(description = "User password", example = "Qwerty!123")
     private String password;
 
     @Override

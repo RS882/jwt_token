@@ -311,13 +311,13 @@ class AuthIntegrationTest {
         }
 
         @Test
-        public void refresh_with_status_404_cookie_is_null() throws Exception {
+        public void refresh_with_status_400_cookie_is_null() throws Exception {
             mockMvc.perform(get(REFRESH_URL))
                     .andExpect(status().isBadRequest());
         }
 
         @Test
-        public void refresh_with_status_404_cookie_is_incorrect() throws Exception {
+        public void refresh_with_status_400_cookie_is_incorrect() throws Exception {
             Cookie cookie = makeCookie("test", "test");
             mockMvc.perform(get(REFRESH_URL)
                             .cookie(cookie))

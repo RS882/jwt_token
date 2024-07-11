@@ -44,15 +44,7 @@ public class SecurityConfig {
                         .anyRequest().denyAll()
                 )
                 .addFilterBefore(validationFilter, UsernamePasswordAuthenticationFilter.class)
-//                .logout(logout -> logout
-//                        .logoutUrl("/v1/registration/logout")
-//                        .addLogoutHandler(logoutHandlerService)
-//                        .logoutSuccessHandler(((request, response, authentication) -> {
-//                            SecurityContextHolder.clearContext();
-//                            response.setStatus(HttpServletResponse.SC_OK);
-//                            response.getWriter().write("Logout successful");
-//                        }))
-//                )
+
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(customAuthenticationEntryPoint))
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .build();

@@ -11,4 +11,6 @@ public interface TokenRepository extends MongoRepository<RefreshToken, String> {
     Optional<List<RefreshToken>> findByUserId(String id);
 
     void deleteAllByToken(String token);
+
+    void deleteAllByUserId(String id);
 }

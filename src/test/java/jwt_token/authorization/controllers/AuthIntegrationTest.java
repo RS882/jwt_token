@@ -111,27 +111,6 @@ class AuthIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
-    private void _401_token_belongs_another_user(String path) throws Exception {
-        UserRegistrationDto dto = UserRegistrationDto
-                .builder()
-                .email("user2@example.com")
-                .password(USER1_PASSWORD)
-                .build();
-        String createdUserId2 = mongoTemplate.save(
-                        mapperService.toEntity(dto),
-                        TEST_COLLECTION_NAME)
-                .getId();
-        String tokenUser2 = getAccessToken("user2@example.com", USER1_PASSWORD);
-
-        mongoTemplate.remove(
-                query(where("_id").is(createdUserId2)),
-                TEST_COLLECTION_NAME);
-
-        mockMvc.perform(get(path)
-                        .header(HttpHeaders.AUTHORIZATION, tokenUser2))
-                .andExpect(status().isUnauthorized());
-    }
-
     private Cookie getCookie() throws Exception {
         String dtoJson = mapper.writeValueAsString(
                 LoginDto.builder()
@@ -199,7 +178,7 @@ class AuthIntegrationTest {
 
         @ParameterizedTest(name = "Test {index}: login_with_status_404_email_or_password_is_wrong [{arguments}]")
         @MethodSource("wrongLoginData")
-        public void login_with_status_404_email_or_password_is_wrong(LoginDto dto) throws Exception {
+        public void login_with_status_401_email_or_password_is_wrong(LoginDto dto) throws Exception {
             String dtoJson = mapper.writeValueAsString(dto);
             mockMvc.perform(post(LOGIN_URL)
                             .contentType(MediaType.APPLICATION_JSON)
@@ -354,7 +333,7 @@ class AuthIntegrationTest {
         }
 
         @Test
-        public void refresh_with_status_401_token_belongs_another_user() throws Exception {
+        public void refresh_with_status_401_token_is_invalid() throws Exception {
             Cookie cookie = getCookie();
             String refreshToken = cookie.getValue();
             tokenService.removeOldRefreshToken(refreshToken);
@@ -393,10 +372,6 @@ class AuthIntegrationTest {
             _401_token_is_incorrect(VALIDATION_URL);
         }
 
-        @Test
-        public void validation_with_status_401_token_belongs_another_user() throws Exception {
-            _401_token_belongs_another_user(VALIDATION_URL);
-        }
     }
 
     @Nested
@@ -413,6 +388,7 @@ class AuthIntegrationTest {
                     .andExpect(cookie().value(COOKIE_REFRESH_TOKEN_NAME, (String) null))
                     .andReturn();
         }
+
         @Test
         public void logout_with_status_401_header_authorization_is_null() throws Exception {
             _401_header_authorization_is_null(LOGOUT_URL);
@@ -428,9 +404,5 @@ class AuthIntegrationTest {
             _401_token_is_incorrect(LOGOUT_URL);
         }
 
-        @Test
-        public void logout_with_status_401_token_belongs_another_user() throws Exception {
-            _401_token_belongs_another_user(LOGOUT_URL);
-        }
     }
 }

@@ -11,6 +11,10 @@ import jwt_token.authorization.domain.entity.RefreshToken;
 import jwt_token.authorization.domain.entity.User;
 import jwt_token.authorization.exception_handler.exceptions.not_found.TokenNotFoundException;
 import jwt_token.authorization.repositorys.TokenRepository;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -124,7 +128,7 @@ public class TokenService {
                 .compact();
     }
 
-    private  void saveRefreshToken(String refreshToken, String userId) {
+    private void saveRefreshToken(String refreshToken, String userId) {
         RefreshToken refreshTokenEntity = RefreshToken.builder()
                 .token(refreshToken)
                 .userId(userId)

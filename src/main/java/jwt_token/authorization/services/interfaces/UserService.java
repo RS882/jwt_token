@@ -4,10 +4,8 @@ import jwt_token.authorization.domain.dto.UserDto;
 import jwt_token.authorization.domain.dto.UserRegistrationDto;
 
 
-public interface RegistrationService {
+public interface UserService {
 
     UserDto registerUser(UserRegistrationDto userRegistrationDto);
-
-
 
 }

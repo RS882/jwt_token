@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import static jwt_token.authorization.services.AuthServiceImpl.MAX_COUNT_OF_LOGINS;
 import static jwt_token.authorization.services.CookieService.COOKIE_REFRESH_TOKEN_NAME;
 import static jwt_token.authorization.services.CookieService.makeCookie;
 import static org.springframework.data.mongodb.core.query.Criteria.where;
@@ -186,6 +187,43 @@ class AuthIntegrationTest {
                     .andExpect(jsonPath("$.message").isString());
         }
 
+        @Test
+        public void login_with_status_403_count_of_logins_is_more_than_maximum() throws Exception {
+            UUID random = UUID.randomUUID();
+            UserRegistrationDto dto = UserRegistrationDto
+                    .builder()
+                    .email(random + "@example.com")
+                    .password(USER1_PASSWORD)
+                    .build();
+
+            String createdUserId2 = mongoTemplate.save(
+                            mapperService.toEntity(dto),
+                            TEST_COLLECTION_NAME)
+                    .getId();
+
+            String dtoJson = mapper.writeValueAsString(
+                    LoginDto.builder()
+                            .email(random + "@example.com")
+                            .password(USER1_PASSWORD)
+                            .build());
+
+            for (int i = 0; i < MAX_COUNT_OF_LOGINS + 1; i++) {
+                mockMvc.perform(post(LOGIN_URL)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(dtoJson))
+                        .andExpect(status().isOk());
+            }
+            mockMvc.perform(post(LOGIN_URL)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(dtoJson))
+                    .andExpect(status().isForbidden());
+            mongoTemplate.remove(
+                    query(where("_id").is(createdUserId2)),
+                    TEST_COLLECTION_NAME);
+            mongoTemplate.remove(
+                    query(where("userId").is(createdUserId2)),
+                    TEST_TOKEN_COLLECTION_NAME);
+        }
 
         private static Stream<Arguments> incorrectLoginData() {
             return Stream.of(Arguments.of(

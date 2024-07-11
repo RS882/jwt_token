@@ -4,7 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import jwt_token.authorization.domain.dto.UserDto;
 import jwt_token.authorization.domain.dto.UserRegistrationDto;
-import jwt_token.authorization.services.interfaces.RegistrationService;
+import jwt_token.authorization.services.interfaces.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class RegistrationController {
 
-    private final RegistrationService registrationService;
+    private final UserService registrationService;
 
     @PostMapping
     public ResponseEntity<UserDto> userRegistration(

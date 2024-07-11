@@ -24,6 +24,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import static jwt_token.authorization.services.AuthServiceImpl.MAX_COUNT_OF_LOGINS;
 import static jwt_token.authorization.services.CookieService.COOKIE_REFRESH_TOKEN_NAME;
 import static jwt_token.authorization.services.TokenService.ACCESS_TOKEN_EXPIRES_IN_MINUTES;
 import static jwt_token.authorization.services.TokenService.REFRESH_TOKEN_EXPIRES_IN_MINUTES;
@@ -58,6 +59,13 @@ public class AuthController {
                     )),
             @ApiResponse(responseCode = "401",
                     description = "Incorrect password or email",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ResponseMessageDto.class)
+
+                    )),
+            @ApiResponse(responseCode = "403",
+                    description = "Count of user's logins is more than maximum(" + MAX_COUNT_OF_LOGINS + ")",
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = ResponseMessageDto.class)

@@ -19,11 +19,13 @@ import org.springframework.http.*;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.client.ResourceAccessException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import static jwt_token.authorization.services.AuthServiceImpl.MAX_COUNT_OF_LOGINS;
 import static jwt_token.authorization.services.CookieService.COOKIE_REFRESH_TOKEN_NAME;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -80,6 +82,7 @@ public class AuthTest {
                     .password(encoder.encode(USER1_PASSWORD))
                     .isActive(true)
                     .role(Role.ROLE_USER)
+                    .loginBlockedUntil(LocalDateTime.now())
                     .build();
             user1Id = userRepository.save(testUser).getId();
         } else user1Id = user.getId();
@@ -191,6 +194,17 @@ public class AuthTest {
             } catch (ResourceAccessException ex) {
                 assertTrue(ex.getMessage() != null);
             }
+        }
+
+        @Test
+        public void login_with_status_403_count_of_logins_is_more_than_maximum() {
+            HttpEntity<LoginDto> request = new HttpEntity<>(dto, headers);
+            for (int i = 0; i < MAX_COUNT_OF_LOGINS + 1; i++) {
+                template.postForEntity(URL, request, TokenResponseDto.class);
+            }
+            ResponseEntity<TokenResponseDto> response =
+                    template.postForEntity(URL, request, TokenResponseDto.class);
+            assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode(), "Response has unexpected status");
         }
 
         private static Stream<Arguments> incorrectLoginData() {

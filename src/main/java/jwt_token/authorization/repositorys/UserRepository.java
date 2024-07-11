@@ -9,4 +9,5 @@ public interface UserRepository extends MongoRepository<User,String > {
 
     Optional<User> findByEmailAndIsActiveTrue(String email);
     void deleteAllByEmail(String email);
+    boolean existsByEmail(String email);
 }
